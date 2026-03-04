@@ -2,6 +2,7 @@ window.ShadowTED = window.ShadowTED || {};
 
 ShadowTED.UI = {
     els: {},
+    _allSentences: [],
 
     init() {
         this.els = {
@@ -23,89 +24,81 @@ ShadowTED.UI = {
         const state = ShadowTED.State;
 
         state.on('sentenceChanged', (data) => {
-            this.updateActiveSentence(data.index, data.groupSize);
+            this._renderFocused(data.index, data.groupSize);
             this.updateCounter(data.index, state.totalSentences);
         });
 
         state.on('groupSizeChanged', (size) => {
             this.updateGroupDisplay(size);
-            this.updateActiveSentence(state.currentIndex, size);
+            this._renderFocused(state.currentIndex, size);
         });
 
         state.on('playbackStarted', () => {
             this.els.playerContainer?.classList.add('playing');
+            const active = this.els.sentenceList?.querySelector('.focused-active');
+            if (active) active.classList.add('playing');
         });
 
         state.on('playbackPaused', () => {
             this.els.playerContainer?.classList.remove('playing');
-            const active = this.els.sentenceList?.querySelector('.sentence-item.playing');
-            if (active) active.classList.remove('playing');
+            const playing = this.els.sentenceList?.querySelector('.playing');
+            if (playing) playing.classList.remove('playing');
         });
     },
 
     renderSentenceList(sentences) {
-        const list = this.els.sentenceList;
-        if (!list) return;
-
-        list.innerHTML = '';
-        const frag = document.createDocumentFragment();
-
-        sentences.forEach((sent, i) => {
-            const item = document.createElement('div');
-            item.className = 'sentence-item';
-            item.dataset.index = i;
-            item.style.animationDelay = `${Math.min(i * 20, 500)}ms`;
-
-            item.innerHTML = `
-                <span class="sentence-num">${String(i + 1).padStart(2, '0')}</span>
-                <span class="sentence-text">${this._escapeHtml(sent.text)}</span>
-                <span class="sentence-time">${this._formatTime(sent.startTime)}</span>
-            `;
-
-            item.addEventListener('click', () => {
-                const state = ShadowTED.State;
-                ShadowTED.Player.pause();
-                state.currentIndex = i;
-                state.emit('sentenceChanged', { index: i, groupSize: state.groupSize });
-                setTimeout(() => ShadowTED.Player.playSentence(), 50);
-            });
-
-            frag.appendChild(item);
-        });
-
-        list.appendChild(frag);
-        this.updateActiveSentence(0, ShadowTED.State.groupSize);
-        this.updateCounter(0, sentences.length);
+        this._allSentences = sentences;
         this.updateGroupDisplay(ShadowTED.State.groupSize);
     },
 
-    updateActiveSentence(index, groupSize) {
-        const items = this.els.sentenceList?.querySelectorAll('.sentence-item');
-        if (!items || items.length === 0) return;
+    /** Render only the active group + 1 next sentence */
+    _renderFocused(index, groupSize) {
+        const list = this.els.sentenceList;
+        if (!list || this._allSentences.length === 0) return;
 
-        const groupEnd = Math.min(index + groupSize - 1, items.length - 1);
+        list.innerHTML = '';
 
-        items.forEach((item, i) => {
-            item.classList.remove('active', 'in-group', 'past', 'playing');
-            if (i < index) {
-                item.classList.add('past');
-            } else if (i === index) {
-                item.classList.add('active');
-            } else if (i <= groupEnd) {
-                item.classList.add('in-group');
-            }
-        });
+        const groupEnd = Math.min(index + groupSize - 1, this._allSentences.length - 1);
 
-        if (items[index]) {
-            items[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Render active group sentences
+        for (let i = index; i <= groupEnd; i++) {
+            const sent = this._allSentences[i];
+            const el = this._createSentenceEl(sent, i, 'focused-active');
+            list.appendChild(el);
+        }
+
+        // Render 1 next sentence as preview
+        const nextIdx = groupEnd + 1;
+        if (nextIdx < this._allSentences.length) {
+            const sent = this._allSentences[nextIdx];
+            const el = this._createSentenceEl(sent, nextIdx, 'focused-next');
+            list.appendChild(el);
         }
     },
 
+    _createSentenceEl(sent, i, cls) {
+        const el = document.createElement('div');
+        el.className = `focused-sentence ${cls}`;
+        el.innerHTML = `
+            <span class="focused-num">${String(i + 1).padStart(2, '0')}</span>
+            <span class="focused-text">${this._escapeHtml(sent.text)}</span>
+            <span class="focused-time">${this._formatTime(sent.startTime)}</span>
+        `;
+        // Click to play
+        el.addEventListener('click', () => {
+            const state = ShadowTED.State;
+            ShadowTED.Player.pause();
+            state.currentIndex = i;
+            state.emit('sentenceChanged', { index: i, groupSize: state.groupSize });
+            setTimeout(() => ShadowTED.Player.playSentence(), 50);
+        });
+        return el;
+    },
+
     setProgressDuration(duration) {
-        const active = this.els.sentenceList?.querySelector('.sentence-item.active');
+        const active = this.els.sentenceList?.querySelector('.focused-active');
         if (active) {
             active.style.setProperty('--progress-duration', duration + 's');
-            active.classList.add('playing');
         }
     },
 
