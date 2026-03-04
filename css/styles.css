@@ -86,6 +86,21 @@ body {
     animation: fadeInUp 0.6s ease 0.2s both;
 }
 
+/* ===== HERO IMAGE ===== */
+#hero-section {
+    max-width: 520px;
+    margin: 24px auto 0;
+    padding: 0 24px;
+    animation: fadeInUp 0.6s ease 0.25s both;
+}
+
+#hero-image {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 40px rgba(230, 43, 30, 0.15), 0 2px 16px rgba(0, 0, 0, 0.4);
+    display: block;
+}
+
 /* ===== RESOURCES ===== */
 #resources-section {
     max-width: 680px;
