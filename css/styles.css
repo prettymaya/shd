@@ -86,7 +86,94 @@ body {
     animation: fadeInUp 0.6s ease 0.2s both;
 }
 
-/* ===== UPLOAD SECTION ===== */
+/* ===== RESOURCES ===== */
+#resources-section {
+    max-width: 600px;
+    margin: 24px auto 8px;
+    padding: 0 24px;
+    animation: fadeInUp 0.5s ease 0.25s both;
+}
+
+.resources-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.resource-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+}
+
+.resource-heading {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--white-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.resource-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.resource-links a {
+    display: inline-block;
+    padding: 5px 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    color: var(--white-muted);
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.resource-links a:hover {
+    border-color: var(--ted-red);
+    color: var(--white);
+    background: var(--ted-red-subtle);
+}
+
+/* ===== PASTE AREA ===== */
+.paste-area {
+    margin-top: 4px;
+}
+
+#paste-input {
+    width: 100%;
+    min-height: 100px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--white);
+    font-family: var(--font-primary);
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    transition: border-color var(--transition-normal);
+}
+
+#paste-input::placeholder {
+    color: var(--white-dim);
+}
+
+#paste-input:focus {
+    border-color: var(--ted-red);
+}
+
 #upload-section {
     max-width: 520px;
     margin: 32px auto;
@@ -701,9 +788,28 @@ kbd {
         font-size: 13px;
     }
 
-    #upload-section {
-        margin: 20px auto;
+    #resources-section {
         padding: 0 16px;
+        margin: 16px auto 8px;
+    }
+
+    .resources-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .resource-group {
+        padding: 12px 14px;
+    }
+
+    #upload-section {
+        margin: 12px auto;
+        padding: 0 16px;
+    }
+
+    #paste-input {
+        min-height: 80px;
+        font-size: 12px;
     }
 
     #workspace {

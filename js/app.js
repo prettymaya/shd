@@ -3,6 +3,7 @@ window.ShadowTED = window.ShadowTED || {};
 ShadowTED.App = {
     _videoFile: null,
     _txtFile: null,
+    _pastedText: null,
 
     init() {
         ShadowTED.Player.init();
@@ -11,6 +12,7 @@ ShadowTED.App = {
 
         const videoInput = document.getElementById('video-file');
         const txtInput = document.getElementById('txt-file');
+        const pasteInput = document.getElementById('paste-input');
         const videoCard = document.getElementById('upload-video-card');
         const txtCard = document.getElementById('upload-txt-card');
         const startBtn = document.getElementById('start-btn');
@@ -36,9 +38,31 @@ ShadowTED.App = {
             const file = e.target.files[0];
             if (!file) return;
             this._txtFile = file;
+            this._pastedText = null; // Clear paste if file selected
+            if (pasteInput) pasteInput.value = '';
             txtCard.classList.add('selected');
             txtCard.querySelector('.upload-title').textContent = file.name;
             txtCard.querySelector('.upload-hint').textContent = this._formatSize(file.size);
+            this._checkReady();
+        });
+
+        // Paste input
+        pasteInput?.addEventListener('input', () => {
+            const val = pasteInput.value.trim();
+            if (val.length > 10) {
+                this._pastedText = val;
+                this._txtFile = null; // Clear file if pasting
+                txtCard.classList.add('selected');
+                txtCard.querySelector('.upload-title').textContent = 'Pasted transcript';
+                txtCard.querySelector('.upload-hint').textContent = `${val.split('\n').length} lines`;
+            } else {
+                this._pastedText = null;
+                if (!this._txtFile) {
+                    txtCard.classList.remove('selected');
+                    txtCard.querySelector('.upload-title').textContent = 'Upload Transcript (.txt)';
+                    txtCard.querySelector('.upload-hint').textContent = 'or paste below ↓';
+                }
+            }
             this._checkReady();
         });
 
@@ -72,22 +96,33 @@ ShadowTED.App = {
 
     _checkReady() {
         const btn = document.getElementById('start-btn');
-        if (btn) btn.disabled = !(this._videoFile && this._txtFile);
+        const hasVideo = !!this._videoFile;
+        const hasTranscript = !!(this._txtFile || this._pastedText);
+        if (btn) btn.disabled = !(hasVideo && hasTranscript);
     },
 
     async _start() {
-        if (!this._videoFile || !this._txtFile) return;
-
         const feedback = document.getElementById('upload-feedback');
 
         try {
-            // Parse transcript
-            const text = await this._txtFile.text();
+            // Get transcript text
+            let text;
+            if (this._txtFile) {
+                text = await this._txtFile.text();
+            } else if (this._pastedText) {
+                text = this._pastedText;
+            } else {
+                return;
+            }
+
+            if (!this._videoFile) return;
+
             const sentences = this._parseTranscript(text);
 
             if (sentences.length === 0) {
-                feedback.textContent = '❌ No sentences found in transcript file.';
+                feedback.textContent = '❌ No sentences found. Check the format: timestamp, text, blank line.';
                 feedback.className = 'upload-feedback error';
+                feedback.classList.remove('hidden');
                 return;
             }
 
@@ -110,47 +145,35 @@ ShadowTED.App = {
         } catch (err) {
             feedback.textContent = '❌ Error: ' + err.message;
             feedback.className = 'upload-feedback error';
+            feedback.classList.remove('hidden');
         }
     },
 
     _parseTranscript(text) {
-        /**
-         * Parse transcript format:
-         * 00:00:04
-         * Are there any other parents here
-         *
-         * 00:00:06
-         * who have struggled to get your kids out the door on time?
-         * 
-         * Each block: timestamp line, text line, blank line.
-         */
         const lines = text.split('\n');
         const timeRe = /^(\d{1,2}:)?\d{2}:\d{2}$/;
-        const raw = []; // { time, text }
+        const raw = [];
 
         let i = 0;
         while (i < lines.length) {
             const line = lines[i].trim();
 
             if (timeRe.test(line)) {
-                // This is a timestamp, next line is the text
                 const time = this._parseTime(line);
                 const textLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
                 if (textLine) {
                     raw.push({ time, text: textLine });
                 }
-                i += 2; // Skip past timestamp + text
+                i += 2;
             } else {
                 i++;
             }
 
-            // Skip blank lines
             while (i < lines.length && lines[i].trim() === '') i++;
         }
 
         if (raw.length === 0) return [];
 
-        // Build sentences with startTime and endTime
         const sentences = [];
         for (let j = 0; j < raw.length; j++) {
             const endTime = (j + 1 < raw.length) ? raw[j + 1].time : raw[j].time + 5;
@@ -166,13 +189,9 @@ ShadowTED.App = {
     },
 
     _parseTime(str) {
-        /** Parse "MM:SS" or "HH:MM:SS" to seconds. */
         const parts = str.split(':').map(Number);
-        if (parts.length === 3) {
-            return parts[0] * 3600 + parts[1] * 60 + parts[2];
-        } else if (parts.length === 2) {
-            return parts[0] * 60 + parts[1];
-        }
+        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        if (parts.length === 2) return parts[0] * 60 + parts[1];
         return 0;
     },
 

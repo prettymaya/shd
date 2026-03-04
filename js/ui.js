@@ -16,6 +16,7 @@ ShadowTED.UI = {
             groupDec: document.getElementById('group-dec'),
             groupInc: document.getElementById('group-inc'),
             uploadSection: document.getElementById('upload-section'),
+            resourcesSection: document.getElementById('resources-section'),
             header: document.getElementById('header'),
         };
 
@@ -125,6 +126,7 @@ ShadowTED.UI = {
 
     showWorkspace(title) {
         if (this.els.uploadSection) this.els.uploadSection.classList.add('hidden');
+        if (this.els.resourcesSection) this.els.resourcesSection.classList.add('hidden');
 
         const ws = this.els.workspace;
         if (ws) {
@@ -142,6 +144,7 @@ ShadowTED.UI = {
 
     hideWorkspace() {
         if (this.els.uploadSection) this.els.uploadSection.classList.remove('hidden');
+        if (this.els.resourcesSection) this.els.resourcesSection.classList.remove('hidden');
         if (this.els.workspace) this.els.workspace.classList.add('hidden');
         this.els.shortcutBar?.classList.add('hidden');
         this.els.touchControls?.classList.add('hidden');
