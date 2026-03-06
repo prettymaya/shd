@@ -76,12 +76,17 @@ ShadowTED.UI = {
         }
     },
 
+    _translationCache: {},
+
     _createSentenceEl(sent, i, cls) {
         const el = document.createElement('div');
         el.className = `focused-sentence ${cls}`;
         el.innerHTML = `
             <span class="focused-num">${String(i + 1).padStart(2, '0')}</span>
-            <span class="focused-text">${this._escapeHtml(sent.text)}</span>
+            <div class="focused-content">
+                <span class="focused-text">${this._escapeHtml(sent.text)}</span>
+                <span class="focused-tr" id="tr-${i}"></span>
+            </div>
             <span class="focused-time">${this._formatTime(sent.startTime)}</span>
         `;
         // Click to play
@@ -92,7 +97,42 @@ ShadowTED.UI = {
             state.emit('sentenceChanged', { index: i, groupSize: state.groupSize });
             setTimeout(() => ShadowTED.Player.playSentence(), 50);
         });
+
+        // Fetch translation
+        this._translateSentence(sent.text, i);
+
         return el;
+    },
+
+    async _translateSentence(text, index) {
+        // Skip non-speech like (Laughter), (Applause)
+        if (/^\(.*\)$/.test(text.trim())) {
+            const el = document.getElementById(`tr-${index}`);
+            if (el) el.textContent = '';
+            return;
+        }
+
+        // Check cache
+        if (this._translationCache[text]) {
+            const el = document.getElementById(`tr-${index}`);
+            if (el) el.textContent = this._translationCache[text];
+            return;
+        }
+
+        try {
+            const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|tr`;
+            const res = await fetch(url);
+            const data = await res.json();
+            const tr = data?.responseData?.translatedText || '';
+
+            if (tr && tr.toUpperCase() !== text.toUpperCase()) {
+                this._translationCache[text] = tr;
+                const el = document.getElementById(`tr-${index}`);
+                if (el) el.textContent = tr;
+            }
+        } catch (e) {
+            // Silently fail - translation is optional
+        }
     },
 
     setProgressDuration(duration) {

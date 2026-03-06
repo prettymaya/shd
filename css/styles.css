@@ -532,6 +532,28 @@ body {
     font-weight: 500;
 }
 
+.focused-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.focused-tr {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.35);
+    font-style: italic;
+    font-weight: 300;
+    transition: opacity var(--transition-normal);
+}
+
+.focused-next .focused-tr {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.2);
+}
+
 .focused-active .focused-num {
     font-size: 14px;
     color: var(--ted-red);
