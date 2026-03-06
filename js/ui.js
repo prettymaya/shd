@@ -85,7 +85,7 @@ ShadowTED.UI = {
             <span class="focused-num">${String(i + 1).padStart(2, '0')}</span>
             <div class="focused-content">
                 <span class="focused-text">${this._escapeHtml(sent.text)}</span>
-                <span class="focused-tr" id="tr-${i}"></span>
+                <span class="focused-tr"></span>
             </div>
             <span class="focused-time">${this._formatTime(sent.startTime)}</span>
         `;
@@ -98,24 +98,22 @@ ShadowTED.UI = {
             setTimeout(() => ShadowTED.Player.playSentence(), 50);
         });
 
-        // Fetch translation
-        this._translateSentence(sent.text, i);
+        // Fetch translation — pass the span element directly
+        const trSpan = el.querySelector('.focused-tr');
+        this._translateSentence(sent.text, trSpan);
 
         return el;
     },
 
-    async _translateSentence(text, index) {
+    async _translateSentence(text, trSpan) {
+        if (!trSpan) return;
+
         // Skip non-speech like (Laughter), (Applause)
-        if (/^\(.*\)$/.test(text.trim())) {
-            const el = document.getElementById(`tr-${index}`);
-            if (el) el.textContent = '';
-            return;
-        }
+        if (/^\(.*\)$/.test(text.trim())) return;
 
         // Check cache
         if (this._translationCache[text]) {
-            const el = document.getElementById(`tr-${index}`);
-            if (el) el.textContent = this._translationCache[text];
+            trSpan.textContent = this._translationCache[text];
             return;
         }
 
@@ -127,11 +125,10 @@ ShadowTED.UI = {
 
             if (tr && tr.toUpperCase() !== text.toUpperCase()) {
                 this._translationCache[text] = tr;
-                const el = document.getElementById(`tr-${index}`);
-                if (el) el.textContent = tr;
+                trSpan.textContent = tr;
             }
         } catch (e) {
-            // Silently fail - translation is optional
+            // Silently fail
         }
     },
 
