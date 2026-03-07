@@ -11,6 +11,10 @@ ShadowTED.Keyboard = {
         if (e.metaKey || e.ctrlKey || e.altKey) return;
 
         switch (e.key.toLowerCase()) {
+            case ' ':
+                e.preventDefault();
+                this._replayCurrent();
+                break;
             case 's':
                 e.preventDefault();
                 this._playCurrent();
@@ -41,6 +45,13 @@ ShadowTED.Keyboard = {
 
     _playCurrent() {
         if (ShadowTED.State.sentences.length === 0) return;
+        ShadowTED.Player.playSentence();
+    },
+
+    _replayCurrent() {
+        if (ShadowTED.State.sentences.length === 0) return;
+        // Force stop and immediately replay — no delay
+        ShadowTED.Player.pause();
         ShadowTED.Player.playSentence();
     },
 
