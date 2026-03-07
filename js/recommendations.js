@@ -89,7 +89,7 @@ ShadowTED.Recommendations = {
         this._panel.className = 'reco-panel hidden';
         this._panel.innerHTML = `
             <div class="reco-header">
-                <h2 class="reco-title">🎤 Recommended TED Talks</h2>
+                <h2 class="reco-title">Recommended TED Talks</h2>
                 <button class="reco-close" aria-label="Close">✕</button>
             </div>
             <p class="reco-subtitle">Tap a talk to copy its YouTube URL</p>
