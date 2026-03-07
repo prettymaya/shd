@@ -23,18 +23,8 @@
 
     <!-- HEADER -->
     <header id="header">
-        <div class="header-row">
-            <div class="logo">
-                <span class="logo-shadow">Shadow</span><span class="logo-ted">TED</span>
-            </div>
-            <button id="recommend-btn" class="recommend-btn">
-                <svg viewBox="0 0 24 24" width="16" height="16">
-                    <path
-                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-                        fill="currentColor" />
-                </svg>
-                Recommendations
-            </button>
+        <div class="logo">
+            <span class="logo-shadow">Shadow</span><span class="logo-ted">TED</span>
         </div>
         <p class="tagline">Master any TED Talk, one sentence at a time</p>
     </header>
@@ -119,12 +109,21 @@
                 placeholder="Or paste transcript here...&#10;&#10;00:00:04&#10;Are there any other parents here&#10;&#10;00:00:06&#10;who have struggled to get your kids out?"></textarea>
         </div>
 
-        <button id="start-btn" class="start-btn" disabled>
-            <svg viewBox="0 0 24 24" width="20" height="20">
-                <path d="M8 5v14l11-7z" fill="currentColor" />
-            </svg>
-            <span>Start Shadowing</span>
-        </button>
+        <div class="button-row">
+            <button id="start-btn" class="start-btn" disabled>
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path d="M8 5v14l11-7z" fill="currentColor" />
+                </svg>
+                <span>Start Shadowing</span>
+            </button>
+            <button id="recommend-btn" class="recommend-btn">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                        fill="currentColor" />
+                </svg>
+                Recommendations
+            </button>
+        </div>
 
         <div id="upload-feedback" class="hidden"></div>
     </section>

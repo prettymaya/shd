@@ -59,17 +59,11 @@ body {
     animation: fadeIn 0.8s ease;
 }
 
-.header-row {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 8px;
-}
 
 .logo {
     font-size: 42px;
     letter-spacing: -1px;
+    margin-bottom: 8px;
 }
 
 .logo-shadow {
@@ -85,27 +79,41 @@ body {
     margin-left: 2px;
 }
 
+.button-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.button-row .start-btn {
+    flex: 1;
+    margin-top: 0;
+}
+
 .recommend-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    padding: 8px 14px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
+    padding: 14px 18px;
+    background: transparent;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
     color: var(--white-muted);
     font-family: var(--font-primary);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .recommend-btn:hover {
     border-color: var(--ted-red);
     color: var(--white);
     background: var(--ted-red-subtle);
+
 }
 
 /* ===== RECOMMENDATION SIDEBAR ===== */
