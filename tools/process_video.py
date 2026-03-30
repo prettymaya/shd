@@ -6,6 +6,11 @@ import yt_dlp
 import whisper
 import datetime
 import traceback
+import imageio_ffmpeg
+
+# Ensure ffmpeg is in PATH for yt-dlp and whisper
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+
 
 def format_timestamp(seconds: float) -> str:
     """Formats float seconds into HH:MM:SS string."""
