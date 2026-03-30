@@ -23,15 +23,25 @@ ShadowTED.Player = {
         ShadowTED.State.isPlaying = false;
     },
 
+    setPlaybackRate(rate) {
+        if (this._video) {
+            this._video.playbackRate = rate;
+            this._video.defaultPlaybackRate = rate;
+        }
+    },
+
     async playSentence() {
         if (!this._video || !this._video.src) return;
 
         const state = ShadowTED.State;
         if (state.sentences.length === 0) return;
 
-        const startTime = state.currentGroupStartTime;
+        const rawStartTime = state.currentGroupStartTime;
         const endTime = state.currentGroupEndTime;
-        if (startTime >= endTime) return;
+        if (rawStartTime >= endTime) return;
+        
+        // Apply early start offset but don't go below 0
+        const startTime = Math.max(0, rawStartTime - state.earlyStartOffset);
 
         // Cancel any previous play request
         const myId = ++this._playId;
@@ -68,15 +78,16 @@ ShadowTED.Player = {
             if (this._playId !== myId) return;
         }
 
-        // 5) Set end boundary and play
+        // 5) Set end boundary, speed, and play
         this._endTime = endTime;
         this._isMonitoring = true;
+        this.setPlaybackRate(state.playbackSpeed);
         this._video.play();
 
         state.isPlaying = true;
         state.emit('playbackStarted');
 
-        const duration = endTime - startTime;
+        const duration = (endTime - startTime) / state.playbackSpeed;
         ShadowTED.UI.setProgressDuration(duration);
     },
 

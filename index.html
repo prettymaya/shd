@@ -163,7 +163,7 @@
 
         <div id="sentence-panel">
             <div id="sentence-controls">
-                <span class="control-label">Sentences per group</span>
+                <span class="control-label">Sentences</span>
                 <div class="group-stepper">
                     <button id="group-dec" class="stepper-btn" disabled><svg viewBox="0 0 24 24" width="16" height="16">
                             <path d="M19 13H5v-2h14v2z" fill="currentColor" />
@@ -172,6 +172,28 @@
                     <button id="group-inc" class="stepper-btn"><svg viewBox="0 0 24 24" width="16" height="16">
                             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
                         </svg></button>
+                </div>
+            </div>
+            <div id="playback-settings" style="display: flex; gap: 12px; margin-bottom: 12px; padding: 0 16px;">
+                <div class="setting-group" style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                    <label for="speed-setting" class="control-label" style="margin: 0;">Speed</label>
+                    <select id="speed-setting" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 8px; font-family: Inter, sans-serif; font-size: 14px; outline: none; cursor: pointer;">
+                        <option value="0.5">0.5x</option>
+                        <option value="0.75">0.75x</option>
+                        <option value="1.0" selected>1.0x (Normal)</option>
+                        <option value="1.25">1.25x</option>
+                        <option value="1.5">1.5x</option>
+                    </select>
+                </div>
+                <div class="setting-group" style="display: flex; flex-direction: column; gap: 4px; flex: 1;">
+                    <label for="early-start-setting" class="control-label" style="margin: 0;">Start Early</label>
+                    <select id="early-start-setting" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 8px; font-family: Inter, sans-serif; font-size: 14px; outline: none; cursor: pointer;">
+                        <option value="0" selected>0 ms (Exact)</option>
+                        <option value="0.1">-100 ms</option>
+                        <option value="0.2">-200 ms</option>
+                        <option value="0.5">-500 ms</option>
+                        <option value="1.0">-1 sec</option>
+                    </select>
                 </div>
             </div>
             <div id="sentence-list"></div>

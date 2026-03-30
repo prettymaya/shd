@@ -8,6 +8,8 @@ ShadowTED.State = (function () {
         sentences: [],
         currentIndex: 0,
         groupSize: 1,
+        playbackSpeed: 1.0,
+        earlyStartOffset: 0,
         isPlaying: false,
         isLoading: false,
         error: null,
@@ -46,6 +48,8 @@ ShadowTED.State = (function () {
             this.sentences = [];
             this.currentIndex = 0;
             this.groupSize = 1;
+            this.playbackSpeed = parseFloat(document.getElementById('speed-setting')?.value || '1.0');
+            this.earlyStartOffset = parseFloat(document.getElementById('early-start-setting')?.value || '0');
             this.isPlaying = false;
             this.isLoading = false;
             this.error = null;

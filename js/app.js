@@ -92,6 +92,19 @@ ShadowTED.App = {
         document.getElementById('group-inc')?.addEventListener('click', () => {
             ShadowTED.Keyboard._changeGroupSize(1);
         });
+
+        // Playback Settings
+        document.getElementById('speed-setting')?.addEventListener('change', (e) => {
+            const speed = parseFloat(e.target.value);
+            ShadowTED.State.playbackSpeed = speed;
+            if (ShadowTED.Player._video) {
+                ShadowTED.Player.setPlaybackRate(speed);
+            }
+        });
+        
+        document.getElementById('early-start-setting')?.addEventListener('change', (e) => {
+            ShadowTED.State.earlyStartOffset = parseFloat(e.target.value);
+        });
     },
 
     _checkReady() {
