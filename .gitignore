@@ -2,3 +2,8 @@
 *.pyc
 __pycache__/
 .claude/
+tools/venv/
+tools/downloads/
+*.mp4
+*.m4a
+*.webm

@@ -18,11 +18,18 @@ This directory contains standalone tools to download YouTube / TED videos and au
 
 ## Usage
 
-Run the script by passing the URL of the video you want to translate to the `--url` via the argument:
-
-```bash
-python3 process_video.py "https://www.youtube.com/watch?v=..."
-```
+1. Open your terminal and navigate to the tools folder:
+   ```bash
+   cd tools
+   ```
+2. Activate the virtual environment:
+   ```bash
+   source venv/bin/activate
+   ```
+3. Run the script by passing the URL of the video:
+   ```bash
+   python process_video.py "https://www.youtube.com/watch?v=..."
+   ```
 
 ### What happens?
 1. The script downloads the video into the `downloads` folder as an `.mp4` file.
