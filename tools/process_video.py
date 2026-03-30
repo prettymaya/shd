@@ -6,7 +6,11 @@ import yt_dlp
 import whisper
 import datetime
 import traceback
+import ssl
 import imageio_ffmpeg
+
+# Fix macOS Python SSL certificate issue
+ssl._create_default_https_context = ssl._create_unverified_context
 
 # Setup: ensure ffmpeg/ffprobe symlinks exist in tools/bin/ so yt-dlp and whisper can find them
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
