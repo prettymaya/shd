@@ -68,10 +68,18 @@ def process_video(url: str):
         print(f"[+] Video downloaded to: {video_path}")
         
         # 2. Transcribe Video using Whisper Large V3 Turbo
-        print("[*] Loading Whisper Large V3 Turbo. This might take a moment if downloading the model for the first time...")
-        # 'turbo' is the newly released openai-whisper large-v3-turbo model. 
-        # Device is automatically selected (CPU, CUDA, MPS depending on platform).
-        model = whisper.load_model("turbo")
+        print("[*] Loading Whisper Large V3 Turbo...")
+        
+        # Use Apple Silicon GPU (MPS) if available, otherwise CPU
+        import torch
+        if torch.backends.mps.is_available():
+            device = "mps"
+            print("[+] Apple Silicon GPU (MPS) detected — using GPU for faster transcription!")
+        else:
+            device = "cpu"
+            print("[!] No GPU found, using CPU (this will be slower)")
+        
+        model = whisper.load_model("turbo", device=device)
         
         print("[*] Transcribing audio with sentence-level timestamps...")
         # We use the video directly, Whisper will extract the audio.
