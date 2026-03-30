@@ -24,12 +24,16 @@ def format_timestamp(seconds: float) -> str:
 
 def download_video(url: str, output_dir: str = "."):
     """Downloads a video from a URL and merges it to MP4."""
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg_dir = os.path.dirname(ffmpeg_path)
+    
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'restrictfilenames': True,  # Keep filenames clean
         'noplaylist': True,
+        'ffmpeg_location': ffmpeg_dir,
     }
     
     print(f"[*] Downloading video from: {url}")
