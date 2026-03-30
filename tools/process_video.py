@@ -8,8 +8,22 @@ import datetime
 import traceback
 import imageio_ffmpeg
 
-# Ensure ffmpeg is in PATH for yt-dlp and whisper
-os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+# Setup: ensure ffmpeg/ffprobe symlinks exist in tools/bin/ so yt-dlp and whisper can find them
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+BIN_DIR = os.path.join(SCRIPT_DIR, "bin")
+os.makedirs(BIN_DIR, exist_ok=True)
+
+_ffmpeg_src = imageio_ffmpeg.get_ffmpeg_exe()
+_ffmpeg_link = os.path.join(BIN_DIR, "ffmpeg")
+_ffprobe_link = os.path.join(BIN_DIR, "ffprobe")
+
+if not os.path.exists(_ffmpeg_link):
+    os.symlink(_ffmpeg_src, _ffmpeg_link)
+if not os.path.exists(_ffprobe_link):
+    os.symlink(_ffmpeg_src, _ffprobe_link)
+
+# Prepend bin/ to PATH so all tools (yt-dlp, whisper) find ffmpeg
+os.environ["PATH"] = BIN_DIR + os.pathsep + os.environ.get("PATH", "")
 
 
 def format_timestamp(seconds: float) -> str:
@@ -24,16 +38,13 @@ def format_timestamp(seconds: float) -> str:
 
 def download_video(url: str, output_dir: str = "."):
     """Downloads a video from a URL and merges it to MP4."""
-    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-    ffmpeg_dir = os.path.dirname(ffmpeg_path)
-    
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'restrictfilenames': True,  # Keep filenames clean
         'noplaylist': True,
-        'ffmpeg_location': ffmpeg_dir,
+        'ffmpeg_location': BIN_DIR,
     }
     
     print(f"[*] Downloading video from: {url}")
