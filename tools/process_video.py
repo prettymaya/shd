@@ -29,11 +29,19 @@ os.environ["PATH"] = BIN_DIR + os.pathsep + os.environ.get("PATH", "")
 
 # Available models
 MODELS_INFO = {
-    'tiny':      '~39M  | ⚡ Super fast | Basic quality',
-    'base':      '~74M  | ⚡ Very fast  | Good quality',
-    'small':     '~244M | ⚡ Fast       | Great quality',
-    'medium':    '~769M | 🔄 Moderate   | Excellent quality',
-    'large-v3':  '~1.5B | 🐢 Slow       | Best quality 👑',
+    'tiny':           '~39M  | ⚡ Super fast | Basic quality',
+    'base':           '~74M  | ⚡ Very fast  | Good quality',
+    'small':          '~244M | ⚡ Fast       | Great quality',
+    'medium':         '~769M | 🔄 Moderate   | Excellent quality',
+    'distil-large-v3':'~756M | ⚡ Fast       | Near-best quality ⭐ Best balance',
+    'large-v3-turbo': '~809M | 🔄 Moderate   | Very high quality',
+    'large-v3':       '~1.5B | 🐢 Slow       | Best quality 👑',
+}
+
+# Some models need HuggingFace model IDs for faster-whisper
+MODEL_ID_MAP = {
+    'distil-large-v3': 'Systran/faster-distil-whisper-large-v3',
+    'large-v3-turbo':  'deepdml/faster-whisper-large-v3-turbo-ct2',
 }
 
 
@@ -81,10 +89,13 @@ def process_video(url: str, model_name: str = "small"):
         if model_name in MODELS_INFO:
             print(f"    {MODELS_INFO[model_name]}")
 
+        # Resolve model ID (some models use HuggingFace IDs)
+        resolved_model = MODEL_ID_MAP.get(model_name, model_name)
+
         # INT8 quantization = fast + low memory on CPU
         print("[*] Using INT8 quantization (optimized for CPU) 🧊")
         model = WhisperModel(
-            model_name,
+            resolved_model,
             device="cpu",
             compute_type="int8",
         )
@@ -92,7 +103,8 @@ def process_video(url: str, model_name: str = "small"):
         # 3. Transcribe with VAD filtering
         print(f"\n[*] Transcribing audio with VAD filtering...")
         if duration:
-            speed_factor = 8 if model_name in ['tiny', 'base', 'small'] else 4
+            fast_models = ['tiny', 'base', 'small', 'distil-large-v3']
+            speed_factor = 8 if model_name in fast_models else 4
             est = max(10, duration / speed_factor)
             print(f"[*] Estimated time: ~{int(est//60)}m {int(est%60)}s")
 
