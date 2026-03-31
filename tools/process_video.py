@@ -1,21 +1,35 @@
 #!/usr/bin/env python3
+"""Download YouTube videos and transcribe for ShadowTED.
+
+Engines:
+  --engine deepgram   → Deepgram Nova-3 (best quality, cloud, free $200 credit)
+  --engine whisper    → whisper.cpp + Metal GPU (local, no internet needed)
+"""
 import sys
 import os
 import argparse
+import subprocess
+import re
 import time
-import datetime
 import traceback
 import ssl
+import json
 import imageio_ffmpeg
 
 # Fix macOS Python SSL certificate issue
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# Setup: ensure ffmpeg/ffprobe symlinks exist in tools/bin/
+# Setup paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BIN_DIR = os.path.join(SCRIPT_DIR, "bin")
+WHISPER_CPP = os.path.join(SCRIPT_DIR, "whisper.cpp")
+WHISPER_CLI = os.path.join(WHISPER_CPP, "build", "bin", "whisper-cli")
+MODELS_DIR = os.path.join(WHISPER_CPP, "models")
+ENV_FILE = os.path.join(SCRIPT_DIR, ".env")
+
 os.makedirs(BIN_DIR, exist_ok=True)
 
+# Setup ffmpeg symlinks
 _ffmpeg_src = imageio_ffmpeg.get_ffmpeg_exe()
 _ffmpeg_link = os.path.join(BIN_DIR, "ffmpeg")
 _ffprobe_link = os.path.join(BIN_DIR, "ffprobe")
@@ -27,33 +41,34 @@ if not os.path.exists(_ffprobe_link):
 
 os.environ["PATH"] = BIN_DIR + os.pathsep + os.environ.get("PATH", "")
 
-# Available models
-MODELS_INFO = {
-    'tiny':           '~39M  | ⚡ Super fast | Basic quality',
-    'base':           '~74M  | ⚡ Very fast  | Good quality',
-    'small':          '~244M | ⚡ Fast       | Great quality',
-    'medium':         '~769M | 🔄 Moderate   | Excellent quality',
-    'distil-large-v3':'~756M | ⚡ Fast       | Near-best quality ⭐ Best balance',
-    'large-v3-turbo': '~809M | 🔄 Moderate   | Very high quality',
-    'large-v3':       '~1.5B | 🐢 Slow       | Best quality 👑',
+# Whisper models
+WHISPER_MODELS = {
+    'base': 'ggml-base.bin',
+    'small': 'ggml-small.bin',
+    'medium': 'ggml-medium.bin',
+    'large-v3': 'ggml-large-v3.bin',
 }
 
-# Some models need HuggingFace model IDs for faster-whisper
-MODEL_ID_MAP = {
-    'distil-large-v3': 'Systran/faster-distil-whisper-large-v3',
-    'large-v3-turbo':  'deepdml/faster-whisper-large-v3-turbo-ct2',
-}
+
+def load_env():
+    """Load API keys from .env file."""
+    if os.path.exists(ENV_FILE):
+        with open(ENV_FILE) as f:
+            for line in f:
+                line = line.strip()
+                if '=' in line and not line.startswith('#'):
+                    key, val = line.split('=', 1)
+                    os.environ[key.strip()] = val.strip()
 
 
 def format_timestamp(seconds: float) -> str:
-    total_seconds = int(seconds)
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    sec = total_seconds % 60
-    return f"{hours:02d}:{minutes:02d}:{sec:02d}"
+    total = int(seconds)
+    h, m, s = total // 3600, (total % 3600) // 60, total % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 
 def download_video(url: str, output_dir: str = "."):
+    """Download video using yt-dlp."""
     import yt_dlp
     ydl_opts = {
         'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
@@ -64,119 +79,235 @@ def download_video(url: str, output_dir: str = "."):
         'ffmpeg_location': BIN_DIR,
     }
 
-    print(f"[*] Downloading video from: {url}")
+    print(f"📥  Downloading video...")
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info_dict)
+        info = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info)
         if not filename.endswith('.mp4'):
             filename = os.path.splitext(filename)[0] + '.mp4'
-        return filename, info_dict.get('duration', 0)
+        return filename, info.get('duration', 0)
 
 
-def process_video(url: str, model_name: str = "small"):
+def extract_audio_wav(video_path: str) -> str:
+    """Extract audio as 16kHz mono WAV."""
+    wav_path = os.path.splitext(video_path)[0] + ".wav"
+    ffmpeg = os.path.join(BIN_DIR, "ffmpeg")
+    print(f"🎵  Extracting audio...")
+    subprocess.run([
+        ffmpeg, '-i', video_path,
+        '-vn', '-acodec', 'pcm_s16le', '-ar', '16000', '-ac', '1',
+        wav_path, '-y'
+    ], capture_output=True, check=True)
+    return wav_path
+
+
+# ─── DEEPGRAM ENGINE ──────────────────────────────────────────────
+
+def transcribe_deepgram(wav_path: str) -> list:
+    """Transcribe using Deepgram Nova-3 API (best quality)."""
+    api_key = os.environ.get("DEEPGRAM_API_KEY", "")
+    if not api_key:
+        print("❌  DEEPGRAM_API_KEY not set!")
+        print("    1. Sign up free: https://console.deepgram.com/signup")
+        print("    2. Get $200 free credit")
+        print(f"    3. Save key in: {ENV_FILE}")
+        print(f"       DEEPGRAM_API_KEY=your_key_here")
+        return []
+
+    print(f"🧠  Transcribing with Deepgram Nova-3 (cloud)...")
+    start_time = time.time()
+
+    # Read audio file
+    with open(wav_path, 'rb') as f:
+        audio_data = f.read()
+
+    import requests as req_lib
+
+    url = "https://api.deepgram.com/v1/listen"
+    params = {
+        "model": "nova-3",
+        "language": "en",
+        "punctuate": "true",
+        "utterances": "true",
+        "utt_split": "0.8",
+        "smart_format": "true",
+    }
+    headers = {
+        'Authorization': f'Token {api_key}',
+        'Content-Type': 'audio/wav',
+    }
+
+    file_mb = len(audio_data) / (1024 * 1024)
+    print(f"    Uploading {file_mb:.1f} MB audio...")
+
+    resp = req_lib.post(url, params=params, headers=headers, data=audio_data, timeout=600)
+    resp.raise_for_status()
+    result = resp.json()
+
+    elapsed = time.time() - start_time
+    print(f"⚡  Done in {elapsed:.1f}s")
+
+    segments = []
+
+    # Parse utterances (sentence-level segments)
+    utterances = result.get('results', {}).get('utterances', [])
+    if utterances:
+        for utt in utterances:
+            text = utt.get('transcript', '').strip()
+            if not text:
+                continue
+            segments.append({
+                'start': utt['start'],
+                'end': utt['end'],
+                'text': text,
+            })
+            print(f"  [{format_timestamp(utt['start'])}]  {text}")
+    else:
+        # Fallback to word-level -> sentence assembly
+        channels = result.get('results', {}).get('channels', [])
+        if channels:
+            for alt in channels[0].get('alternatives', []):
+                paragraphs = alt.get('paragraphs', {}).get('paragraphs', [])
+                for para in paragraphs:
+                    for sent in para.get('sentences', []):
+                        text = sent.get('text', '').strip()
+                        if text:
+                            segments.append({
+                                'start': sent['start'],
+                                'end': sent['end'],
+                                'text': text,
+                            })
+                            print(f"  [{format_timestamp(sent['start'])}]  {text}")
+
+    return segments
+
+
+# ─── WHISPER.CPP ENGINE ───────────────────────────────────────────
+
+def transcribe_whisper(wav_path: str, model_name: str = "large-v3") -> list:
+    """Transcribe using whisper.cpp with Metal GPU acceleration."""
+    model_file = os.path.join(MODELS_DIR, WHISPER_MODELS[model_name])
+
+    if not os.path.exists(model_file):
+        print(f"❌  Model not found: {model_file}")
+        print(f"    Run: cd whisper.cpp && bash models/download-ggml-model.sh {model_name}")
+        return []
+    if not os.path.exists(WHISPER_CLI):
+        print(f"❌  whisper-cli not found. Build whisper.cpp first.")
+        return []
+
+    print(f"🧠  Transcribing with whisper.cpp ({model_name}) + Metal GPU 🚀")
+    print()
+
+    process = subprocess.Popen([
+        WHISPER_CLI,
+        '-m', model_file,
+        '-f', wav_path,
+        '-l', 'en',
+        '--print-progress',
+    ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+    segments = []
+    pattern = r'\[(\d{2}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}\.\d{3})\]\s*(.*)'
+
+    for line in process.stdout:
+        line = line.rstrip()
+        match = re.match(pattern, line)
+        if match:
+            start_str, end_str, text = match.group(1), match.group(2), match.group(3).strip()
+            print(f"  {line}")
+
+            parts = start_str.split(':')
+            start = float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+            parts = end_str.split(':')
+            end = float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+
+            if text and not text.startswith('[') and not text.startswith('('):
+                segments.append({'start': start, 'end': end, 'text': text})
+        elif 'total time' in line:
+            print(f"\n  ⏱  {line.strip()}")
+        elif 'progress' in line:
+            print(f"  {line.strip()}")
+
+    process.wait()
+    return segments
+
+
+# ─── MAIN PIPELINE ────────────────────────────────────────────────
+
+def process_video(url: str, engine: str = "deepgram", model_name: str = "large-v3"):
     os.makedirs("downloads", exist_ok=True)
+    load_env()
+
     try:
-        # 1. Download Video
+        # 1. Download
         video_path, duration = download_video(url, output_dir="downloads")
-        print(f"[+] Video downloaded: {video_path}")
+        print(f"✅  Video: {video_path}")
         if duration:
-            print(f"[+] Duration: {format_timestamp(duration)}")
+            print(f"⏱   Duration: {format_timestamp(duration)}")
 
-        # 2. Load faster-whisper model
-        from faster_whisper import WhisperModel
+        # 2. Extract audio
+        wav_path = extract_audio_wav(video_path)
 
-        print(f"\n[*] Loading faster-whisper model: {model_name}")
-        if model_name in MODELS_INFO:
-            print(f"    {MODELS_INFO[model_name]}")
-
-        # Resolve model ID (some models use HuggingFace IDs)
-        resolved_model = MODEL_ID_MAP.get(model_name, model_name)
-
-        # INT8 quantization = fast + low memory on CPU
-        print("[*] Using INT8 quantization (optimized for CPU) 🧊")
-        model = WhisperModel(
-            resolved_model,
-            device="cpu",
-            compute_type="int8",
-        )
-
-        # 3. Transcribe with VAD filtering
-        print(f"\n[*] Transcribing audio with VAD filtering...")
-        if duration:
-            fast_models = ['tiny', 'base', 'small', 'distil-large-v3']
-            speed_factor = 8 if model_name in fast_models else 4
-            est = max(10, duration / speed_factor)
-            print(f"[*] Estimated time: ~{int(est//60)}m {int(est%60)}s")
-
-        start_time = time.time()
-
-        segments_gen, info = model.transcribe(
-            video_path,
-            language="en",
-            beam_size=5,
-            vad_filter=True,           # Filters out silence/noise
-            vad_parameters=dict(
-                min_silence_duration_ms=300,
-            ),
-            condition_on_previous_text=True,
-        )
-
-        # Collect segments with live progress
-        segments = []
-        for seg in segments_gen:
-            segments.append(seg)
-            print(f"  [{format_timestamp(seg.start)} -> {format_timestamp(seg.end)}] {seg.text.strip()}")
-
-        elapsed = time.time() - start_time
-        print(f"\n[+] Transcription done in {int(elapsed//60)}m {int(elapsed%60)}s")
+        # 3. Transcribe
+        print()
+        if engine == "deepgram":
+            segments = transcribe_deepgram(wav_path)
+        else:
+            segments = transcribe_whisper(wav_path, model_name)
 
         if not segments:
-            print("[-] No speech segments detected.")
+            print("❌  No segments found.")
             return
 
-        # 4. Save formatted text file for ShadowTED
-        transcript_path = os.path.splitext(video_path)[0] + ".txt"
+        # 4. Save ShadowTED format
+        txt_path = os.path.splitext(video_path)[0] + ".txt"
+        with open(txt_path, "w", encoding="utf-8") as f:
+            for s in segments:
+                f.write(f"{format_timestamp(s['start'])}\n")
+                f.write(f"{s['text']}\n\n")
 
-        with open(transcript_path, "w", encoding="utf-8") as f:
-            for seg in segments:
-                stamp = format_timestamp(seg.start)
-                text = seg.text.strip()
-                f.write(f"{stamp}\n")
-                f.write(f"{text}\n\n")
+        print(f"\n{'='*55}")
+        print(f"  ✅  {len(segments)} sentences extracted!")
+        print(f"  📹  Video: {os.path.basename(video_path)}")
+        print(f"  📝  Text:  {os.path.basename(txt_path)}")
+        print(f"  🔤  Engine: {engine}" + (f" ({model_name})" if engine == "whisper" else " (Nova-3)"))
+        print(f"{'='*55}")
+        print("  Drag both files into ShadowTED! 🎯")
 
-        print(f"\n{'='*50}")
-        print(f"  ✅ Done! {len(segments)} sentences extracted.")
-        print(f"  📹 Video: {video_path}")
-        print(f"  📝 Text:  {transcript_path}")
-        print(f"{'='*50}")
-        print("[*] Drag and drop both files into ShadowTED!")
+        # Cleanup
+        os.remove(wav_path)
 
     except Exception as e:
-        print(f"[-] Error: {e}")
+        print(f"❌  Error: {e}")
         traceback.print_exc()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Download & Transcribe videos for ShadowTED.",
+        description="Download & transcribe videos for ShadowTED.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Models (use --model):
-  tiny       ⚡ Super fast  | Basic quality
-  base       ⚡ Very fast   | Good quality
-  small      ⚡ Fast        | Great quality  (default)
-  medium     🔄 Moderate    | Excellent quality
-  large-v3   🐢 Slow        | Best quality 👑
+Engines:
+  deepgram   🏆 Best quality (Deepgram Nova-3, cloud, free $200 credit)
+  whisper    🖥️  Local only (whisper.cpp + Metal GPU, no internet)
+
+Setup Deepgram:
+  1. Sign up: https://console.deepgram.com/signup ($200 free credit)
+  2. Create .env file in tools/ folder:
+     DEEPGRAM_API_KEY=your_key_here
 
 Examples:
   python process_video.py "https://youtu.be/..."
-  python process_video.py "https://youtu.be/..." --model medium
-  python process_video.py "https://youtu.be/..." --model large-v3
+  python process_video.py "https://youtu.be/..." --engine whisper
+  python process_video.py "https://youtu.be/..." --engine whisper --model medium
         """
     )
-    parser.add_argument("url", help="Video URL (YouTube, TED, etc.)")
-    parser.add_argument("--model", default="small", choices=MODELS_INFO.keys(),
-                        help="Whisper model (default: small)")
+    parser.add_argument("url", help="Video URL")
+    parser.add_argument("--engine", default="deepgram", choices=["deepgram", "whisper"],
+                        help="Transcription engine (default: deepgram)")
+    parser.add_argument("--model", default="large-v3", choices=WHISPER_MODELS.keys(),
+                        help="Whisper model (only for --engine whisper)")
 
     args = parser.parse_args()
-    process_video(args.url, model_name=args.model)
+    process_video(args.url, engine=args.engine, model_name=args.model)

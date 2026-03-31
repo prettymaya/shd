@@ -5,6 +5,11 @@ __pycache__/
 tools/venv/
 tools/downloads/
 tools/bin/
+tools/whisper.cpp/
+tools/AppleTranscribe.app/
+tools/apple_transcribe
+tools/apple_transcribe.swift
+tools/.env
 *.mp4
 *.m4a
 *.webm
