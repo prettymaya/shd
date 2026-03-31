@@ -71,7 +71,8 @@ def download_video(url: str, output_dir: str = "."):
     """Download video using yt-dlp."""
     import yt_dlp
     ydl_opts = {
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        # Max 480p for smaller files (good enough for shadowing, ~15-25MB for 15min)
+        'format': 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]/best',
         'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
         'merge_output_format': 'mp4',
         'restrictfilenames': True,
