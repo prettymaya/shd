@@ -90,7 +90,7 @@ ShadowTED.Gist = {
 
         // Try to include video if local file exists and small enough
         const videoFile = ShadowTED.App._videoFile;
-        if (videoFile && videoFile.size < 25 * 1024 * 1024) { // < 25MB
+        if (videoFile && videoFile.size < 50 * 1024 * 1024) { // < 50MB
             this._toast('📤 Encoding video + transcript...');
             try {
                 const videoBase64 = await this._fileToBase64(videoFile);
@@ -98,8 +98,8 @@ ShadowTED.Gist = {
             } catch (e) {
                 console.warn('Could not encode video:', e);
             }
-        } else if (videoFile && videoFile.size >= 25 * 1024 * 1024) {
-            this._toast('📤 Video too large, saving YouTube link + transcript...');
+        } else if (videoFile && videoFile.size >= 50 * 1024 * 1024) {
+            this._toast('📤 Video too large (>50MB), saving YouTube link + transcript...');
         } else {
             this._toast('📤 Saving to Gist...');
         }
