@@ -128,6 +128,7 @@ def transcribe_deepgram(wav_path: str) -> list:
         "model": "nova-3",
         "language": "en",
         "punctuate": "true",
+        "paragraphs": "true",
         "utterances": "true",
         "utt_split": "0.8",
         "smart_format": "true",
@@ -146,28 +147,16 @@ def transcribe_deepgram(wav_path: str) -> list:
 
     elapsed = time.time() - start_time
     print(f"⚡  Done in {elapsed:.1f}s")
+    print()
 
     segments = []
 
-    # Parse utterances (sentence-level segments)
-    utterances = result.get('results', {}).get('utterances', [])
-    if utterances:
-        for utt in utterances:
-            text = utt.get('transcript', '').strip()
-            if not text:
-                continue
-            segments.append({
-                'start': utt['start'],
-                'end': utt['end'],
-                'text': text,
-            })
-            print(f"  [{format_timestamp(utt['start'])}]  {text}")
-    else:
-        # Fallback to word-level -> sentence assembly
-        channels = result.get('results', {}).get('channels', [])
-        if channels:
-            for alt in channels[0].get('alternatives', []):
-                paragraphs = alt.get('paragraphs', {}).get('paragraphs', [])
+    # Use paragraphs -> sentences for proper sentence-level segmentation
+    channels = result.get('results', {}).get('channels', [])
+    if channels:
+        for alt in channels[0].get('alternatives', []):
+            paragraphs = alt.get('paragraphs', {}).get('paragraphs', [])
+            if paragraphs:
                 for para in paragraphs:
                     for sent in para.get('sentences', []):
                         text = sent.get('text', '').strip()
@@ -178,6 +167,20 @@ def transcribe_deepgram(wav_path: str) -> list:
                                 'text': text,
                             })
                             print(f"  [{format_timestamp(sent['start'])}]  {text}")
+
+    # Fallback: use utterances if paragraphs not available
+    if not segments:
+        utterances = result.get('results', {}).get('utterances', [])
+        for utt in utterances:
+            text = utt.get('transcript', '').strip()
+            if not text:
+                continue
+            segments.append({
+                'start': utt['start'],
+                'end': utt['end'],
+                'text': text,
+            })
+            print(f"  [{format_timestamp(utt['start'])}]  {text}")
 
     return segments
 
