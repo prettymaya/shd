@@ -73,19 +73,26 @@
 
     <!-- UPLOAD SECTION -->
     <section id="upload-section">
-        <div class="upload-card" id="upload-video-card">
-            <div class="upload-icon">
-                <svg viewBox="0 0 24 24" width="32" height="32">
-                    <path
-                        d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
-                        fill="currentColor" />
-                </svg>
+        <div class="video-source-area">
+            <div class="upload-card" id="upload-video-card">
+                <div class="upload-icon">
+                    <svg viewBox="0 0 24 24" width="32" height="32">
+                        <path
+                            d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"
+                            fill="currentColor" />
+                    </svg>
+                </div>
+                <div class="upload-info">
+                    <span class="upload-title">Upload Video / Audio</span>
+                    <span class="upload-hint">MP4 or MP3 file</span>
+                </div>
+                <input type="file" id="video-file" accept="video/mp4,video/*,audio/mpeg,audio/mp3,audio/*" hidden>
             </div>
-            <div class="upload-info">
-                <span class="upload-title">Upload Video / Audio</span>
-                <span class="upload-hint">MP4 or MP3 file</span>
+            <div class="or-divider"><span>or</span></div>
+            <div class="youtube-input-wrap">
+                <svg class="yt-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M21.8 8.001a2.749 2.749 0 0 0-1.935-1.946C18.165 5.6 12 5.6 12 5.6s-6.165 0-7.865.455A2.749 2.749 0 0 0 2.2 8.001C1.75 9.708 1.75 12 1.75 12s0 2.292.45 3.999a2.749 2.749 0 0 0 1.935 1.946c1.7.455 7.865.455 7.865.455s6.165 0 7.865-.455a2.749 2.749 0 0 0 1.935-1.946c.45-1.707.45-3.999.45-3.999s0-2.292-.45-3.999zM9.75 15.02V8.98L15.5 12l-5.75 3.02z" fill="#ff0000"/></svg>
+                <input type="text" id="youtube-url" placeholder="Paste YouTube link here..." autocomplete="off" spellcheck="false">
             </div>
-            <input type="file" id="video-file" accept="video/mp4,video/*,audio/mpeg,audio/mp3,audio/*" hidden>
         </div>
 
         <div class="upload-card" id="upload-txt-card">
@@ -149,6 +156,7 @@
         <div id="player-panel">
             <div id="player-container">
                 <video id="video-player" playsinline></video>
+                <div id="youtube-player-wrap" class="hidden"><div id="youtube-player"></div></div>
             </div>
             <div id="player-meta">
                 <div class="meta-left">
@@ -234,6 +242,7 @@
     <script src="js/keyboard.js"></script>
     <script src="js/recommendations.js"></script>
     <script src="js/app.js"></script>
+    <script src="https://www.youtube.com/iframe_api" async></script>
 </body>
 
 </html>

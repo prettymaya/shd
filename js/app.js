@@ -2,6 +2,7 @@ window.ShadowTED = window.ShadowTED || {};
 
 ShadowTED.App = {
     _videoFile: null,
+    _youtubeUrl: null,
     _txtFile: null,
     _pastedText: null,
 
@@ -13,6 +14,7 @@ ShadowTED.App = {
         const videoInput = document.getElementById('video-file');
         const txtInput = document.getElementById('txt-file');
         const pasteInput = document.getElementById('paste-input');
+        const ytInput = document.getElementById('youtube-url');
         const videoCard = document.getElementById('upload-video-card');
         const txtCard = document.getElementById('upload-txt-card');
         const startBtn = document.getElementById('start-btn');
@@ -27,9 +29,32 @@ ShadowTED.App = {
             const file = e.target.files[0];
             if (!file) return;
             this._videoFile = file;
+            this._youtubeUrl = null;
+            if (ytInput) ytInput.value = '';
             videoCard.classList.add('selected');
             videoCard.querySelector('.upload-title').textContent = file.name;
             videoCard.querySelector('.upload-hint').textContent = this._formatSize(file.size);
+            this._checkReady();
+        });
+
+        // YouTube URL entered
+        ytInput?.addEventListener('input', () => {
+            const val = (ytInput.value || '').trim();
+            const ytId = this._extractYouTubeId(val);
+            if (ytId) {
+                this._youtubeUrl = val;
+                this._videoFile = null;
+                videoCard.classList.add('selected');
+                videoCard.querySelector('.upload-title').textContent = 'YouTube Video';
+                videoCard.querySelector('.upload-hint').textContent = ytId;
+            } else {
+                this._youtubeUrl = null;
+                if (!this._videoFile) {
+                    videoCard.classList.remove('selected');
+                    videoCard.querySelector('.upload-title').textContent = 'Upload Video / Audio';
+                    videoCard.querySelector('.upload-hint').textContent = 'MP4 or MP3 file';
+                }
+            }
             this._checkReady();
         });
 
@@ -109,7 +134,7 @@ ShadowTED.App = {
 
     _checkReady() {
         const btn = document.getElementById('start-btn');
-        const hasVideo = !!this._videoFile;
+        const hasVideo = !!(this._videoFile || this._youtubeUrl);
         const hasTranscript = !!(this._txtFile || this._pastedText);
         if (btn) btn.disabled = !(hasVideo && hasTranscript);
     },
@@ -128,7 +153,7 @@ ShadowTED.App = {
                 return;
             }
 
-            if (!this._videoFile) return;
+            if (!this._videoFile && !this._youtubeUrl) return;
 
             const sentences = this._parseTranscript(text);
 
@@ -143,12 +168,20 @@ ShadowTED.App = {
             ShadowTED.State.reset();
             ShadowTED.State.sentences = sentences;
 
-            // Load video from file
-            const videoUrl = URL.createObjectURL(this._videoFile);
-            ShadowTED.Player.loadVideo(videoUrl);
+            // Load video: YouTube or local file
+            let title;
+            if (this._youtubeUrl) {
+                const ytId = this._extractYouTubeId(this._youtubeUrl);
+                ShadowTED.Player.loadYouTube(ytId);
+                title = 'YouTube - ' + ytId;
+            } else {
+                const videoUrl = URL.createObjectURL(this._videoFile);
+                ShadowTED.Player.loadVideo(videoUrl);
+                title = this._videoFile.name.replace(/\.[^.]+$/, '');
+            }
 
             // Show workspace
-            ShadowTED.UI.showWorkspace(this._videoFile.name.replace(/\.[^.]+$/, ''));
+            ShadowTED.UI.showWorkspace(title);
             ShadowTED.UI.renderSentenceList(sentences);
             ShadowTED.State.emit('sentenceChanged', {
                 index: 0,
@@ -206,6 +239,19 @@ ShadowTED.App = {
         if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
         if (parts.length === 2) return parts[0] * 60 + parts[1];
         return 0;
+    },
+
+    _extractYouTubeId(url) {
+        if (!url) return null;
+        const patterns = [
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+            /^([a-zA-Z0-9_-]{11})$/,
+        ];
+        for (const p of patterns) {
+            const m = url.match(p);
+            if (m) return m[1];
+        }
+        return null;
     },
 
     _backToUpload() {

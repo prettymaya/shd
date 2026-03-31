@@ -464,6 +464,81 @@ body {
     letter-spacing: 0.5px;
 }
 
+/* ===== VIDEO SOURCE AREA ===== */
+.video-source-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.or-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+}
+
+.or-divider::before,
+.or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.or-divider span {
+    font-size: 11px;
+    color: var(--white-dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+}
+
+.youtube-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-normal);
+}
+
+.youtube-input-wrap:focus-within {
+    border-color: #ff0000;
+}
+
+.yt-icon {
+    flex-shrink: 0;
+}
+
+#youtube-url {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--white);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    outline: none;
+}
+
+#youtube-url::placeholder {
+    color: var(--white-dim);
+}
+
+/* ===== YOUTUBE PLAYER ===== */
+#youtube-player-wrap {
+    width: 100%;
+    height: 100%;
+}
+
+#youtube-player-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
 /* ===== PASTE AREA ===== */
 .paste-area {
     margin-top: 4px;
