@@ -10,6 +10,7 @@ ShadowTED.App = {
         ShadowTED.Player.init();
         ShadowTED.UI.init();
         ShadowTED.Keyboard.init();
+        ShadowTED.Gist.init();
 
         const videoInput = document.getElementById('video-file');
         const txtInput = document.getElementById('txt-file');
